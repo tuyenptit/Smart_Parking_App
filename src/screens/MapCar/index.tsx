@@ -13,12 +13,10 @@ import MapView, {LatLng, Marker} from 'react-native-maps';
 import {Dimensions} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import MapPark from '../../component/MapPark';
+import {host, port} from '../../config';
+import TcpSocket from 'react-native-tcp-socket';
 
 const windowWidth = Dimensions.get('window').width;
-
-// const DATA = {
-//   b2: true,
-// };
 
 function MapCar() {
   const route = useRoute();
@@ -50,6 +48,44 @@ function MapCar() {
     };
     requestLocationPermission();
   }, []);
+
+  useEffect(() => {
+    const options = {
+      port: port,
+      host: host,
+    };
+
+    const client = TcpSocket.createConnection(options, () => {
+      client.write('Hello server!');
+    });
+
+    client.on('data', function (data) {
+      try {
+        const unavailableParking = JSON.parse(
+          data.toString(),
+        ).unavailable_parking_lots;
+
+        let dataConvert = {};
+        unavailableParking.forEach((element: string) => {
+          dataConvert = {...dataConvert, [element]: true};
+        });
+
+        setDataStatus(dataConvert);
+      } catch (e) {
+        console.log(e);
+      }
+    });
+
+    client.on('error', function (error) {
+      console.log(error);
+    });
+
+    client.on('close', function () {
+      console.log('Connection closed!');
+    });
+  }, []);
+
+  console.log(dataStatus);
 
   return (
     <View style={styles.root}>
